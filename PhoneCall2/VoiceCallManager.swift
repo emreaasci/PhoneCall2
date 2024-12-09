@@ -6,7 +6,14 @@
 //
 
 
-// VoiceCallManager.swift
+//
+//  VoiceCallManager.swift
+//  PhoneCall
+//
+//  Created by Emre Aşcı on 6.12.2024.
+//
+
+
 import AVFoundation
 import SocketIO
 
@@ -17,8 +24,8 @@ class VoiceCallManager: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate
     private var audioPlayer: AVAudioPlayer?
     private var isRecording = false
     private var currentRoomId: String?
-    private var playerNodes: [AVAudioPlayerNode] = []
     let userId: String
+    private var playerNodes: [AVAudioPlayerNode] = []
     
     var onOnlineUsersUpdated: (([String]) -> Void)?
     var onIncomingCall: ((String) -> Void)?
@@ -28,6 +35,8 @@ class VoiceCallManager: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate
     init(userId: String) {
         self.userId = userId
         super.init()
+        
+        // Önce socket'i kur, sonra audio'yu başlat
         setupSocket()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.setupAudio()
@@ -69,8 +78,10 @@ class VoiceCallManager: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate
         }
     }
     
+    
+    
     private func setupSocket() {
-        manager = SocketManager(socketURL: URL(string: "http://your-server-ip:3000")!, config: [.log(true)])
+        manager = SocketManager(socketURL: URL(string: "http://172.10.40.51:3000")!, config: [.log(true)])
         socket = manager.defaultSocket
         
         socket.on(clientEvent: .connect) { [weak self] _, _ in
@@ -130,129 +141,137 @@ class VoiceCallManager: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate
     }
     
     private func startAudioStream() {
-        guard !isRecording else { return }
-        guard audioEngine.isRunning else {
-            print("Audio engine çalışmıyor")
-            return
-        }
-        
-        do {
-            let input = audioEngine.inputNode
-            let format = input.outputFormat(forBus: 0)
+            guard !isRecording else { return }
             
-            // Eğer zaten bir tap varsa kaldır
-            input.removeTap(onBus: 0)
-            
-            // Yeni tap ekle
-            input.installTap(onBus: 0, bufferSize: 512, format: format) { [weak self] buffer, time in
-                guard let self = self, self.isRecording else { return }
+            do {
+                // Input node'u ayarla
+                let input = audioEngine.inputNode
+                let format = input.outputFormat(forBus: 0)
+                let sampleRate = format.sampleRate
                 
-                let frameCount = buffer.frameLength
-                let channels = UnsafeBufferPointer(start: buffer.floatChannelData?[0],
-                                                 count: Int(frameCount))
-                var samples = [Float](repeating: 0, count: Int(frameCount))
-                
-                for i in 0..<Int(frameCount) {
-                    samples[i] = channels[i]
+                // Buffer size'ı küçült ve kaliteyi artır
+                let bufferSize: AVAudioFrameCount = 512
+                input.installTap(onBus: 0, bufferSize: bufferSize, format: format) { [weak self] buffer, time in
+                    guard let self = self, self.isRecording else { return }
+                    
+                    // Ses verisini işle ve gönder
+                    let frameCount = buffer.frameLength
+                    let channels = UnsafeBufferPointer(start: buffer.floatChannelData?[0],
+                                                     count: Int(frameCount))
+                    var samples = [Float](repeating: 0, count: Int(frameCount))
+                    
+                    // Ses örneğini al
+                    for i in 0..<Int(frameCount) {
+                        samples[i] = channels[i]
+                    }
+                    
+                    // Ses verisini base64'e çevir ve gönder
+                    let data = Data(bytes: samples, count: samples.count * MemoryLayout<Float>.size)
+                    if let roomId = self.currentRoomId {
+                        self.socket.emit("audio", [
+                            "roomId": roomId,
+                            "data": data.base64EncodedString(),
+                            "sampleRate": sampleRate
+                        ])
+                    }
                 }
                 
-                let data = Data(bytes: samples, count: samples.count * MemoryLayout<Float>.size)
-                if let roomId = self.currentRoomId {
-                    self.socket.emit("audio", [
-                        "roomId": roomId,
-                        "data": data.base64EncodedString(),
-                        "sampleRate": format.sampleRate
-                    ])
+                if !audioEngine.isRunning {
+                    try audioEngine.start()
                 }
+                isRecording = true
+                print("Audio stream başlatıldı")
+            } catch {
+                print("Audio stream başlatma hatası:", error)
             }
-            
-            isRecording = true
-            print("Audio stream başlatıldı")
-        } catch {
-            print("Audio stream başlatma hatası:", error)
         }
-    }
     
     private func playAudio(_ data: Data) {
-        guard audioEngine.isRunning else {
-            print("Audio engine çalışmıyor")
-            return
-        }
-        
-        do {
-            var samples: [Float] = []
-            data.withUnsafeBytes { rawBuffer in
-                let floatBuffer = rawBuffer.bindMemory(to: Float.self)
-                samples = Array(floatBuffer)
-            }
-            
-            guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
-                print("Format oluşturulamadı")
+            guard audioEngine.isRunning else {
+                print("Audio engine çalışmıyor")
                 return
             }
             
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
-                print("Buffer oluşturulamadı")
-                return
-            }
-            
-            buffer.frameLength = AVAudioFrameCount(samples.count)
-            
-            if let channelData = buffer.floatChannelData?[0] {
-                for i in 0..<samples.count {
-                    channelData[i] = samples[i]
+            do {
+                // Gelen ses verisini float array'e çevir
+                var samples: [Float] = []
+                data.withUnsafeBytes { rawBuffer in
+                    let floatBuffer = rawBuffer.bindMemory(to: Float.self)
+                    samples = Array(floatBuffer)
                 }
+                
+                // Format oluştur
+                guard let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1) else {
+                    print("Format oluşturulamadı")
+                    return
+                }
+                
+                // Buffer oluştur
+                guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
+                    print("Buffer oluşturulamadı")
+                    return
+                }
+                
+                buffer.frameLength = AVAudioFrameCount(samples.count)
+                
+                // Buffer'a verileri kopyala
+                if let channelData = buffer.floatChannelData?[0] {
+                    for i in 0..<samples.count {
+                        channelData[i] = samples[i]
+                    }
+                }
+                
+                // Eski player node'ları temizle
+                for node in playerNodes {
+                    audioEngine.detach(node)
+                }
+                playerNodes.removeAll()
+                
+                // Yeni player node oluştur
+                let playerNode = AVAudioPlayerNode()
+                audioEngine.attach(playerNode)
+                audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: format)
+                playerNodes.append(playerNode)
+                
+                // Sesi çal
+                playerNode.scheduleBuffer(buffer, completionHandler: {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self = self else { return }
+                        // Node'u temizle
+                        self.audioEngine.detach(playerNode)
+                        if let index = self.playerNodes.firstIndex(of: playerNode) {
+                            self.playerNodes.remove(at: index)
+                        }
+                    }
+                })
+                
+                playerNode.play()
+            } catch {
+                print("Ses çalma hatası:", error)
             }
+        }
+    
+    func endCall() {
+            isRecording = false
             
-            // Eski player node'ları temizle
+            // Tüm player node'ları temizle
             for node in playerNodes {
+                node.stop()
                 audioEngine.detach(node)
             }
             playerNodes.removeAll()
             
-            // Yeni player node oluştur
-            let playerNode = AVAudioPlayerNode()
-            audioEngine.attach(playerNode)
-            audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: format)
-            playerNodes.append(playerNode)
+            // Input tap'i kaldır
+            audioEngine.inputNode.removeTap(onBus: 0)
             
-            playerNode.scheduleBuffer(buffer, completionHandler: {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    self.audioEngine.detach(playerNode)
-                    if let index = self.playerNodes.firstIndex(of: playerNode) {
-                        self.playerNodes.remove(at: index)
-                    }
-                }
-            })
+            // Audio engine'i durdur
+            audioEngine.stop()
             
-            playerNode.play()
-        } catch {
-            print("Ses çalma hatası:", error)
+            if let roomId = currentRoomId {
+                socket.emit("end-call", ["roomId": roomId])
+            }
+            
+            currentRoomId = nil
+            onCallEnded?()
         }
-    }
-    
-    func endCall() {
-        isRecording = false
-        
-        // Tüm player node'ları temizle
-        for node in playerNodes {
-            node.stop()
-            audioEngine.detach(node)
-        }
-        playerNodes.removeAll()
-        
-        // Input tap'i kaldır
-        audioEngine.inputNode.removeTap(onBus: 0)
-        
-        // Audio engine'i durdur
-        audioEngine.stop()
-        
-        if let roomId = currentRoomId {
-            socket.emit("end-call", ["roomId": roomId])
-        }
-        
-        currentRoomId = nil
-        onCallEnded?()
-    }
 }

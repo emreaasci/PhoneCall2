@@ -1,3 +1,12 @@
+//
+//  CallView.swift
+//  PhoneCall
+//
+//  Created by Emre Aşcı on 6.12.2024.
+//
+
+import SwiftUI
+
 // CallView.swift
 struct CallView: View {
     let callerId: String
@@ -55,6 +64,7 @@ struct CallView: View {
     private func setupCallbacks() {
         voiceCallManager.onCallConnected = {
             callStatus = "Görüşme devam ediyor"
+            // Görüşme süresini başlat
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
                 callDuration += 1
             }
@@ -72,4 +82,3 @@ struct CallView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 }
-Last edited 1 dakika önce

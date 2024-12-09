@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		279248E12D06E338005C5E67 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 279248E02D06E338005C5E67 /* SocketIO */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		279248BD2D06E2CA005C5E67 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +33,22 @@
 		279248C62D06E2CA005C5E67 /* PhoneCall2UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PhoneCall2UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		279248E32D06E420005C5E67 /* Exceptions for "PhoneCall2" folder in "PhoneCall2" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 279248AB2D06E2C9005C5E67 /* PhoneCall2 */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		279248AE2D06E2C9005C5E67 /* PhoneCall2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				279248E32D06E420005C5E67 /* Exceptions for "PhoneCall2" folder in "PhoneCall2" target */,
+			);
 			path = PhoneCall2;
 			sourceTree = "<group>";
 		};
@@ -52,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				279248E12D06E338005C5E67 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +130,7 @@
 			);
 			name = PhoneCall2;
 			packageProductDependencies = (
+				279248E02D06E338005C5E67 /* SocketIO */,
 			);
 			productName = PhoneCall2;
 			productReference = 279248AC2D06E2C9005C5E67 /* PhoneCall2.app */;
@@ -195,6 +214,9 @@
 			);
 			mainGroup = 279248A32D06E2C9005C5E67;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				279248DF2D06E338005C5E67 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 279248AD2D06E2C9005C5E67 /* Products */;
 			projectDirPath = "";
@@ -399,6 +421,8 @@
 				DEVELOPMENT_TEAM = LBGM24R4NZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCall2/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sesli görüşme için mikrofon izni gerekiyor";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +452,8 @@
 				DEVELOPMENT_TEAM = LBGM24R4NZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCall2/Info.plist;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sesli görüşme için mikrofon izni gerekiyor";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -558,6 +584,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		279248DF2D06E338005C5E67 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		279248E02D06E338005C5E67 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 279248DF2D06E338005C5E67 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			productName = SocketIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 279248A42D06E2C9005C5E67 /* Project object */;
 }
